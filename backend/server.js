@@ -45,6 +45,20 @@ app.use("/api/ai", aiRoutes);
 // Serve uploads folder
 app.use("/uploads", express.static(path.join(__dirname, "uploads"), {}));
 
+// Serve Frontend in Production
+if (process.env.NODE_ENV === "production") {
+  const frontendPath = path.join(__dirname, "../frontend/dist");
+  app.use(express.static(frontendPath));
+
+  app.get("*", (req, res) => {
+    res.sendFile(path.resolve(frontendPath, "index.html"));
+  });
+} else {
+  app.get("/", (req, res) => {
+    res.send("API is running...");
+  });
+}
+
 // Start Server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
