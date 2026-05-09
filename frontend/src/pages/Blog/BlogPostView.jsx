@@ -1,6 +1,6 @@
 import React, { useContext, useEffect, useState } from 'react'
 import axiosInstance from "../../utils/axiosInstance";
-import { API_PATHS } from "../../utils/apiPaths";
+import { API_PATHS, getFullImageUrl } from "../../utils/apiPaths";
 import moment from "moment";
 import {
   LuCircleAlert,
@@ -198,7 +198,7 @@ const BlogPostView = () => {
               </div>
 
               <img
-                src={blogPostData.coverImageUrl || ""}
+                src={getFullImageUrl(blogPostData.coverImageUrl) || ""}
                 alt={blogPostData.title}
                 className="w-full h-96 object-cover mb-6 rounded-lg"
               />
@@ -251,7 +251,7 @@ const BlogPostView = () => {
                         key={comment.id}
                         commentId={comment.id || null}
                         authorName={comment.author.name}
-                        authorPhoto={comment.author.profileImageUrl}
+                        authorPhoto={getFullImageUrl(comment.author.profileImageUrl)}
                         content={comment.content}
                         updatedOn={
                           comment.updatedAt

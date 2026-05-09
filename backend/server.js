@@ -25,7 +25,7 @@ app.set("trust proxy", 1);
 // Middleware to handle CORS
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL || "*",
+    origin: "*",
     methods: ["GET", "POST", "PUT", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization"],
   })
@@ -33,6 +33,13 @@ app.use(
 
 // Middleware
 app.use(express.json());
+
+console.log(`Running in ${process.env.NODE_ENV} mode`);
+
+app.use((req, res, next) => {
+  console.log(`[${new Date().toLocaleTimeString()}] ${req.method} ${req.url}`);
+  next();
+});
 
 // Routes
 app.use("/api/auth", authRoutes);
@@ -44,20 +51,27 @@ app.use("/api/contact", contactRoutes);
 
 app.use("/api/ai", aiRoutes);
 
+// Health check
+app.get("/api/health", (req, res) => {
+  res.json({ status: "ok", mode: process.env.NODE_ENV });
+});
+
 // Serve uploads folder
 app.use("/uploads", express.static(path.join(__dirname, "uploads"), {}));
 
 // Serve Frontend in Production
 if (process.env.NODE_ENV === "production") {
-  const frontendPath = path.join(__dirname, "../frontend/dist");
+  const frontendPath = path.resolve(__dirname, "../frontend/dist");
+  console.log(`Serving frontend from: ${frontendPath}`);
+  
   app.use(express.static(frontendPath));
 
-  app.get("*", (req, res) => {
-    res.sendFile(path.resolve(frontendPath, "index.html"));
+  app.get(/.*/, (req, res) => {
+    res.sendFile(path.join(frontendPath, "index.html"));
   });
 } else {
   app.get("/", (req, res) => {
-    res.send("API is running...");
+    res.send("API is running in Development Mode...");
   });
 }
 

@@ -1,4 +1,13 @@
-export const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
+export const BASE_URL =
+  import.meta.env.MODE === "production"
+    ? ""
+    : import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
+
+export const getFullImageUrl = (imagePath) => {
+  if (!imagePath) return "";
+  if (imagePath.startsWith("http")) return imagePath;
+  return BASE_URL + imagePath;
+};
 
 export const API_PATHS = {
   AUTH: {

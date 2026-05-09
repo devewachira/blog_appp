@@ -1,4 +1,5 @@
 import React from "react";
+import { getFullImageUrl } from "../../../utils/apiPaths";
 
 const FeaturedBlogPost = ({
   title,
@@ -16,7 +17,7 @@ const FeaturedBlogPost = ({
     >
       <div className="col-span-6">
         <img
-          src={coverImageUrl}
+          src={getFullImageUrl(coverImageUrl)}
           alt={title}
           className="w-full h-80 object-cover"
         />
@@ -44,7 +45,7 @@ const FeaturedBlogPost = ({
 
           <div className="flex items-center">
             <img
-              src={authProfileImg}
+              src={getFullImageUrl(authProfileImg)}
               alt={authorName}
               className="w-8 h-8 rounded-full mr-2"
             />

@@ -24,6 +24,16 @@ const BlogPost = sequelize.define(
     },
     coverImageUrl: {
       type: DataTypes.STRING,
+      get() {
+        const rawValue = this.getDataValue("coverImageUrl");
+        if (!rawValue || rawValue.startsWith("http")) return rawValue;
+        
+        // This is a bit tricky since we don't have the 'req' object here.
+        // We can use a standard approach or handle it in the controller/frontend.
+        // For portability, let's keep it relative and have the frontend handle it, 
+        // OR use a global setting.
+        return rawValue;
+      }
     },
     tags: {
       type: DataTypes.TEXT,

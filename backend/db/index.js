@@ -12,7 +12,7 @@ const sequelize = new Sequelize(
   {
     host: process.env.MYSQL_HOST || "localhost",
     dialect: "mysql",
-    logging: false,
+    logging: false, // Disabled logging for a cleaner output
     pool: {
       max: 5,
       min: 0,

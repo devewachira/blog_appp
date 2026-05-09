@@ -1,5 +1,6 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
+import { getFullImageUrl } from "../../../utils/apiPaths";
 
 const BlogPostSummaryCard = ({
   title,
@@ -17,7 +18,7 @@ const BlogPostSummaryCard = ({
       onClick={onClick}
     >
       <img
-        src={coverImageUrl}
+        src={getFullImageUrl(coverImageUrl)}
         alt={title}
         className="w-full h-64 object-cover"
       />
@@ -46,7 +47,7 @@ const BlogPostSummaryCard = ({
 
         <div className="flex items-center">
           <img
-            src={authProfileImg}
+            src={getFullImageUrl(authProfileImg)}
             alt={authorName}
             className="w-8 h-8 rounded-full mr-2"
           />

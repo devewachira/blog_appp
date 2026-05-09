@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import axiosInstance from "../../../utils/axiosInstance";
-import { API_PATHS } from "../../../utils/apiPaths";
+import { API_PATHS, getFullImageUrl } from "../../../utils/apiPaths";
 import { useNavigate } from "react-router-dom";
 
 const TrendingPostsSection = () => {
@@ -37,7 +37,7 @@ const TrendingPostsSection = () => {
           <PostCard
             key={item.id}
             title={item.title}
-            coverImageUrl={item.coverImageUrl}
+            coverImageUrl={getFullImageUrl(item.coverImageUrl)}
             tags={item.tags}
             onClick={() => handleClick(item)}
           />

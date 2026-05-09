@@ -27,6 +27,11 @@ const User = sequelize.define(
     },
     profileImageUrl: {
       type: DataTypes.STRING,
+      get() {
+        const rawValue = this.getDataValue("profileImageUrl");
+        if (!rawValue || rawValue.startsWith("http")) return rawValue;
+        return rawValue;
+      }
     },
     bio: {
       type: DataTypes.TEXT,

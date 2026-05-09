@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import BlogLayout from "../../components/layouts/BlogLayout/BlogLayout";
 import axiosInstance from "../../utils/axiosInstance";
-import { API_PATHS } from "../../utils/apiPaths";
+import { API_PATHS, getFullImageUrl } from "../../utils/apiPaths";
 import moment from "moment";
 import { useNavigate } from "react-router-dom";
 import {
@@ -67,7 +67,7 @@ const BlogLandingPage = () => {
           {blogPostList.length > 0 && (
             <FeaturedBlogPost
               title={blogPostList[0].title}
-              coverImageUrl={blogPostList[0].coverImageUrl}
+              coverImageUrl={getFullImageUrl(blogPostList[0].coverImageUrl)}
               description={blogPostList[0].content}
               tags={blogPostList[0].tags}
               updatedOn={
@@ -75,8 +75,8 @@ const BlogLandingPage = () => {
                   ? moment(blogPostList[0].updatedAt).format("Do MMM YYYY")
                   : "-"
               }
-              authorName={blogPostList[0].author.name}
-              authProfileImg={blogPostList[0].author.profileImageUrl}
+              authorName={blogPostList[0]?.author?.name || "Unknown"}
+              authProfileImg={getFullImageUrl(blogPostList[0]?.author?.profileImageUrl)}
               onClick={() => handleClick(blogPostList[0])}
             />
           )}
@@ -89,7 +89,7 @@ const BlogLandingPage = () => {
                   <BlogPostSummaryCard
                     key={item.id}
                     title={item.title}
-                    coverImageUrl={item.coverImageUrl}
+                    coverImageUrl={getFullImageUrl(item.coverImageUrl)}
                     description={item.content}
                     tags={item.tags}
                     updatedOn={
@@ -97,8 +97,8 @@ const BlogLandingPage = () => {
                         ? moment(item.updatedAt).format("Do MMM YYYY")
                         : "-"
                     }
-                    authorName={item.author.name}
-                    authProfileImg={item.author.profileImageUrl}
+                    authorName={item?.author?.name || "Unknown"}
+                    authProfileImg={getFullImageUrl(item?.author?.profileImageUrl)}
                     onClick={() => handleClick(item)}
                   />
                 ))}
