@@ -1,4 +1,4 @@
-const prisma = require("../config/prisma");
+const { ContactMessage } = require("../models");
 const nodemailer = require("nodemailer");
 
 // @desc    Submit contact form
@@ -13,9 +13,7 @@ const submitContactForm = async (req, res) => {
     }
 
     // 1. Save to Database
-    const contactMessage = await prisma.contactMessage.create({
-      data: { name, email, subject, message },
-    });
+    await ContactMessage.create({ name, email, subject, message });
 
     // 2. Send Email
     const transporter = nodemailer.createTransport({
@@ -62,8 +60,8 @@ const submitContactForm = async (req, res) => {
 // @access  Private
 const getContactMessages = async (req, res) => {
   try {
-    const messages = await prisma.contactMessage.findMany({
-      orderBy: { createdAt: "desc" },
+    const messages = await ContactMessage.findAll({
+      order: [["createdAt", "DESC"]],
     });
     res.json(messages);
   } catch (error) {

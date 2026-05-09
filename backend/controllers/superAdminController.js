@@ -1,23 +1,33 @@
-const prisma = require("../config/prisma");
+const { User, BlogPost, Comment } = require("../models");
+const sequelize = require("../db/index");
 
 // @desc    Get all users (SuperAdmin only)
 // @route   GET /api/superadmin/users
 // @access  Private (SuperAdmin)
 const getAllUsers = async (req, res) => {
   try {
-    const users = await prisma.user.findMany({
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        profileImageUrl: true,
-        createdAt: true,
-        _count: {
-          select: { posts: true, comments: true },
-        },
-      },
-      orderBy: { createdAt: "desc" },
+    const users = await User.findAll({
+      attributes: [
+        "id",
+        "name",
+        "email",
+        "role",
+        "profileImageUrl",
+        "createdAt",
+        [
+          sequelize.literal(
+            "(SELECT COUNT(*) FROM blog_posts WHERE blog_posts.authorId = User.id)"
+          ),
+          "postCount",
+        ],
+        [
+          sequelize.literal(
+            "(SELECT COUNT(*) FROM comments WHERE comments.authorId = User.id)"
+          ),
+          "commentCount",
+        ],
+      ],
+      order: [["createdAt", "DESC"]],
     });
     res.json(users);
   } catch (error) {
@@ -37,7 +47,12 @@ const deleteUser = async (req, res) => {
       return res.status(400).json({ message: "You cannot delete yourself" });
     }
 
-    await prisma.user.delete({ where: { id: userId } });
+    const user = await User.findByPk(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    await user.destroy();
     res.json({ message: "User and all their data deleted" });
   } catch (error) {
     res.status(500).json({ message: "Server error", error: error.message });

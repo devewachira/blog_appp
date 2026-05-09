@@ -16,6 +16,8 @@ const superAdminRoutes = require("./routes/superAdminRoutes");
 const contactRoutes = require("./routes/contactRoutes");
 
 const app = express();
+const sequelize = require("./db/index");
+const { User, BlogPost, Comment, ContactMessage } = require("./models");
 
 // Trust proxy for production (Hostinger/Nginx)
 app.set("trust proxy", 1);
@@ -61,4 +63,20 @@ if (process.env.NODE_ENV === "production") {
 
 // Start Server
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
+sequelize
+  .authenticate()
+  .then(() => {
+    console.log("Connected to MySQL successfully.");
+    return sequelize.sync({ alter: true });
+  })
+  .then(() => {
+    console.log("Database synchronized");
+    app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+  })
+  .catch((err) => {
+    console.error("--- DATABASE CONNECTION ERROR ---");
+    console.error("Error:", err.message);
+    // Start anyway so the server doesn't crash completely
+    app.listen(PORT, () => console.log(`Server running on port ${PORT} (DB Connection Failed)`));
+  });

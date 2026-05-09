@@ -1,80 +1,75 @@
-const prisma = require("../config/prisma");
+const { BlogPost, Comment, User } = require("../models");
 
 // @desc    Dashboard summary
 // @route   POST /api/dashboard-summary
 // @access  Private (Admin only)
 const getDashboardSummary = async (req, res) => {
   try {
-     // Basic counts
+    // Basic counts
     const [totalPosts, drafts, published, totalComments, aiGenerated, totalUsers] =
       await Promise.all([
-        prisma.blogPost.count(),
-        prisma.blogPost.count({ where: { isDraft: true } }),
-        prisma.blogPost.count({ where: { isDraft: false } }),
-        prisma.comment.count(),
-        prisma.blogPost.count({ where: { generatedByAI: true } }),
-        prisma.user.count(),
+        BlogPost.count(),
+        BlogPost.count({ where: { isDraft: true } }),
+        BlogPost.count({ where: { isDraft: false } }),
+        Comment.count(),
+        BlogPost.count({ where: { generatedByAI: true } }),
+        User.count(),
       ]);
 
-    const statsAgg = await prisma.blogPost.aggregate({
-      _sum: {
-        views: true,
-        likes: true,
-      },
-    });
-
-    const totalViews = statsAgg._sum.views || 0;
-    const totalLikes = statsAgg._sum.likes || 0;
+    // Sum views and likes
+    const totalViews = (await BlogPost.sum("views")) || 0;
+    const totalLikes = (await BlogPost.sum("likes")) || 0;
 
     // Top performing posts
-    const topPosts = await prisma.blogPost.findMany({
+    const topPosts = await BlogPost.findAll({
       where: { isDraft: false },
-      select: {
-        id: true,
-        title: true,
-        coverImageUrl: true,
-        views: true,
-        likes: true,
-      },
-      orderBy: [
-        { views: 'desc' },
-        { likes: 'desc' },
+      attributes: ["id", "title", "coverImageUrl", "views", "likes"],
+      order: [
+        ["views", "DESC"],
+        ["likes", "DESC"],
       ],
-      take: 5,
+      limit: 5,
     });
 
     // Recent comments
-    const recentComments = await prisma.comment.findMany({
-      orderBy: { createdAt: 'desc' },
-      take: 5,
-      include: {
-        author: {
-          select: { name: true, profileImageUrl: true }
+    const recentComments = await Comment.findAll({
+      order: [["createdAt", "DESC"]],
+      limit: 5,
+      include: [
+        {
+          model: User,
+          as: "author",
+          attributes: ["name", "profileImageUrl"],
         },
-        post: {
-          select: { title: true, coverImageUrl: true }
-        }
-      }
+        {
+          model: BlogPost,
+          as: "post",
+          attributes: ["title", "coverImageUrl"],
+        },
+      ],
     });
 
     // Tag usage aggregation
-    const postsWithTags = await prisma.blogPost.findMany({
-      select: { tags: true }
+    const postsWithTags = await BlogPost.findAll({
+      attributes: ["tags"],
     });
 
     const tagCounts = {};
-    postsWithTags.forEach(post => {
-      if (Array.isArray(post.tags)) {
-        post.tags.forEach(tag => {
+    postsWithTags.forEach((post) => {
+      const tags = post.tags;
+      if (Array.isArray(tags)) {
+        tags.forEach((tag) => {
           tagCounts[tag] = (tagCounts[tag] || 0) + 1;
         });
       }
     });
 
-    const tagUsage = Object.keys(tagCounts).map(tag => ({
-      tag,
-      count: tagCounts[tag]
-    })).sort((a, b) => b.count - a.count);
+    const tagUsage = Object.keys(tagCounts)
+      .map((tag) => ({
+        tag,
+        count: tagCounts[tag],
+      }))
+      .sort((a, b) => b.count - a.count);
 
     res.json({
       stats: {

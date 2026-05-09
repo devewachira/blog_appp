@@ -1,4 +1,4 @@
-const prisma = require("../config/prisma");
+const { User } = require("../models");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 
@@ -14,7 +14,7 @@ const registerUser = async (req, res) => {
   try {
     const { name, email, password, profileImageUrl, bio, adminAccessToken } = req.body;
 
-    const userExists = await prisma.user.findUnique({ where: { email } });
+    const userExists = await User.findOne({ where: { email } });
     if (userExists) {
       return res.status(400).json({ message: "User already exists" });
     }
@@ -36,15 +36,13 @@ const registerUser = async (req, res) => {
       role = "admin";
     }
 
-    const user = await prisma.user.create({
-      data: {
-        name,
-        email,
-        password: hashedPassword,
-        profileImageUrl,
-        bio,
-        role,
-      },
+    const user = await User.create({
+      name,
+      email,
+      password: hashedPassword,
+      profileImageUrl,
+      bio,
+      role,
     });
 
     res.status(201).json({
@@ -68,7 +66,7 @@ const loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    const user = await prisma.user.findUnique({ where: { email } });
+    const user = await User.findOne({ where: { email } });
     if (!user) {
       return res.status(500).json({ message: "Invalid email or password" });
     }
@@ -98,18 +96,17 @@ const loginUser = async (req, res) => {
 // @access  Private (Requires JWT)
 const getUserProfile = async (req, res) => {
   try {
-    const user = await prisma.user.findUnique({
-      where: { id: req.user.id },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        profileImageUrl: true,
-        bio: true,
-        role: true,
-        createdAt: true,
-        updatedAt: true,
-      },
+    const user = await User.findByPk(req.user.id, {
+      attributes: [
+        "id",
+        "name",
+        "email",
+        "profileImageUrl",
+        "bio",
+        "role",
+        "createdAt",
+        "updatedAt",
+      ],
     });
     if (!user) {
       return res.status(404).json({ message: "User not found" });
@@ -127,28 +124,28 @@ const updateUserProfile = async (req, res) => {
   try {
     const { name, profileImageUrl, bio } = req.body;
 
-    const user = await prisma.user.update({
-      where: { id: req.user.id },
-      data: {
-        name,
-        profileImageUrl,
-        bio,
-      },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        profileImageUrl: true,
-        bio: true,
-        role: true,
-      },
-    });
+    const user = await User.findByPk(req.user.id);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
 
-    res.json(user);
+    user.name = name || user.name;
+    user.profileImageUrl = profileImageUrl || user.profileImageUrl;
+    user.bio = bio || user.bio;
+    
+    await user.save();
+
+    res.json({
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      profileImageUrl: user.profileImageUrl,
+      bio: user.bio,
+      role: user.role,
+    });
   } catch (error) {
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
-
 
 module.exports = { registerUser, loginUser, getUserProfile, updateUserProfile };

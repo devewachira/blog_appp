@@ -1,11 +1,12 @@
-const { GoogleGenAI } = require("@google/genai");
+const { GoogleGenerativeAI } = require("@google/generative-ai");
 const {
   blogPostIdeasPrompt,
   generateReplyPrompt,
   blogSummaryPrompt,
 } = require("../utils/prompts");
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
 // @desc    Generate blog content from title
 // @route   POST /api/ai/generate
@@ -20,13 +21,11 @@ const generateBlogPost = async (req, res) => {
 
     const prompt = `Write a markdown-formatted blog post titled "${title}". Use a ${tone} tone. Include an introduction, subheadings, code examples if relevant, and a conclusion.`;
 
-    const response = await ai.models.generateContent({
-      model: "gemini-flash-latest",
-      contents: prompt,
-    });
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text();
 
-    let rawText = response.text;
-    res.status(200).json(rawText);
+    res.status(200).json(text);
   } catch (error) {
     res.status(500).json({
       message: "Failed to generate blog post",
@@ -48,12 +47,9 @@ const generateBlogPostIdeas = async (req, res) => {
 
     const prompt = blogPostIdeasPrompt(topics);
 
-    const response = await ai.models.generateContent({
-      model: "gemini-flash-latest",
-      contents: prompt,
-    });
-
-    let rawText = response.text;
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    let rawText = response.text();
 
     // Clean it: Remove ```json and ``` from beginning and end
     const cleanedText = rawText
@@ -86,13 +82,11 @@ const generateCommentReply = async (req, res) => {
 
     const prompt = generateReplyPrompt({ author, content });
 
-    const response = await ai.models.generateContent({
-      model: "gemini-flash-latest",
-      contents: prompt,
-    });
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text();
 
-    let rawText = response.text;
-    res.status(200).json(rawText);
+    res.status(200).json(text);
   } catch (error) {
     res.status(500).json({
       message: "Failed to generate comment reply",
@@ -114,12 +108,9 @@ const generatePostSummary = async (req, res) => {
 
     const prompt = blogSummaryPrompt(content);
 
-    const response = await ai.models.generateContent({
-      model: "gemini-flash-latest",
-      contents: prompt,
-    });
-
-    let rawText = response.text;
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    let rawText = response.text();
 
     // Clean it: Remove ```json and ``` from beginning and end
     const cleanedText = rawText
@@ -142,5 +133,5 @@ module.exports = {
   generateBlogPost,
   generateBlogPostIdeas,
   generateCommentReply,
-  generatePostSummary
+  generatePostSummary,
 };

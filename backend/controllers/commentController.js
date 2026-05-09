@@ -1,4 +1,4 @@
-const prisma = require("../config/prisma");
+const { Comment, User, BlogPost } = require("../models");
 
 // @desc    Add a comment to a blog post
 // @route   POST /api/comments/:postId
@@ -9,30 +9,32 @@ const addComment = async (req, res) => {
     const { content, parentCommentId } = req.body;
 
     // Ensure blog post exists
-    const post = await prisma.blogPost.findUnique({ where: { id: postId } });
+    const post = await BlogPost.findByPk(postId);
     if (!post) {
       return res.status(404).json({ message: "Post not found" });
     }
 
-    const comment = await prisma.comment.create({
-      data: {
-        postId: postId,
-        authorId: req.user.id,
-        content,
-        parentCommentId: parentCommentId ? parseInt(parentCommentId) : null,
-      },
-      include: {
-        author: {
-          select: { name: true, profileImageUrl: true }
-        }
-      }
+    const comment = await Comment.create({
+      postId: postId,
+      authorId: req.user.id,
+      content,
+      parentCommentId: parentCommentId ? parseInt(parentCommentId) : null,
     });
 
-    res.status(201).json(comment);
+    // Fetch the comment again with author for the response
+    const fullComment = await Comment.findByPk(comment.id, {
+      include: [
+        {
+          model: User,
+          as: "author",
+          attributes: ["name", "profileImageUrl"],
+        },
+      ],
+    });
+
+    res.status(201).json(fullComment);
   } catch (error) {
-    res
-      .status(500)
-      .json({ message: "Failed to add comment", error: error.message });
+    res.status(500).json({ message: "Failed to add comment", error: error.message });
   }
 };
 
@@ -41,44 +43,44 @@ const addComment = async (req, res) => {
 // @access  Public
 const getAllComments = async (req, res) => {
   try {
-    // Fetch all comments with author populated
-    const comments = await prisma.comment.findMany({
-      include: {
-        author: {
-          select: { name: true, profileImageUrl: true }
+    const comments = await Comment.findAll({
+      include: [
+        {
+          model: User,
+          as: "author",
+          attributes: ["name", "profileImageUrl"],
         },
-        post: {
-          select: { title: true, coverImageUrl: true }
-        }
-      },
-      orderBy: { createdAt: 'asc' }
+        {
+          model: BlogPost,
+          as: "post",
+          attributes: ["title", "coverImageUrl"],
+        },
+      ],
+      order: [["createdAt", "ASC"]],
     });
 
-    // Create a map for commentId -> comment object
     const commentMap = {};
-    comments.forEach(comment => {
-      comment.replies = []; // initialize replies array
-      commentMap[comment.id] = comment;
+    comments.forEach((comment) => {
+      const c = comment.toJSON();
+      c.replies = [];
+      commentMap[c.id] = c;
     });
 
-    // Nest replies under their parentComment
     const nestedComments = [];
-    comments.forEach(comment => {
+    Object.values(commentMap).forEach((comment) => {
       if (comment.parentCommentId) {
         const parent = commentMap[comment.parentCommentId];
         if (parent) {
-          parent.replies.push(commentMap[comment.id]);
+          parent.replies.push(comment);
         }
       } else {
-        nestedComments.push(commentMap[comment.id]);
+        nestedComments.push(comment);
       }
     });
 
     res.json(nestedComments);
   } catch (error) {
-    res
-      .status(500)
-      .json({ message: "Failed to fetch all comment", error: error.message });
+    res.status(500).json({ message: "Failed to fetch all comment", error: error.message });
   }
 };
 
@@ -86,47 +88,48 @@ const getAllComments = async (req, res) => {
 // @route   GET /api/comments/:postId
 // @access  Public
 const getCommentsByPost = async (req, res) => {
-   try {
+  try {
     const postId = parseInt(req.params.postId);
 
-    const comments = await prisma.comment.findMany({
+    const comments = await Comment.findAll({
       where: { postId: postId },
-      include: {
-        author: {
-          select: { name: true, profileImageUrl: true }
+      include: [
+        {
+          model: User,
+          as: "author",
+          attributes: ["name", "profileImageUrl"],
         },
-        post: {
-          select: { title: true, coverImageUrl: true }
-        }
-      },
-      orderBy: { createdAt: 'asc' }
+        {
+          model: BlogPost,
+          as: "post",
+          attributes: ["title", "coverImageUrl"],
+        },
+      ],
+      order: [["createdAt", "ASC"]],
     });
 
-    // Create a map for commentId -> comment object
     const commentMap = {};
-    comments.forEach(comment => {
-      comment.replies = []; // initialize replies array
-      commentMap[comment.id] = comment;
+    comments.forEach((comment) => {
+      const c = comment.toJSON();
+      c.replies = [];
+      commentMap[c.id] = c;
     });
 
-    // Nest replies under their parentComment
     const nestedComments = [];
-    comments.forEach(comment => {
+    Object.values(commentMap).forEach((comment) => {
       if (comment.parentCommentId) {
         const parent = commentMap[comment.parentCommentId];
         if (parent) {
-          parent.replies.push(commentMap[comment.id]);
+          parent.replies.push(comment);
         }
       } else {
-        nestedComments.push(commentMap[comment.id]);
+        nestedComments.push(comment);
       }
     });
 
     res.json(nestedComments);
   } catch (error) {
-    res
-      .status(500)
-      .json({ message: "Failed to fetch comments", error: error.message });
+    res.status(500).json({ message: "Failed to fetch comments", error: error.message });
   }
 };
 
@@ -134,15 +137,14 @@ const getCommentsByPost = async (req, res) => {
 // @route   DELETE /api/comments/:commentId
 // @access  Private
 const deleteComment = async (req, res) => {
-   try {
+  try {
     const commentId = parseInt(req.params.commentId);
 
-    const comment = await prisma.comment.findUnique({ where: { id: commentId } });
+    const comment = await Comment.findByPk(commentId);
     if (!comment) {
       return res.status(404).json({ message: "Comment not found" });
     }
 
-    // Authorization check
     if (
       comment.authorId !== req.user.id &&
       req.user.role !== "admin" &&
@@ -151,14 +153,11 @@ const deleteComment = async (req, res) => {
       return res.status(403).json({ message: "Not authorized to delete this comment" });
     }
 
-    // Delete the comment (Schema handles cascade for replies if configured)
-    await prisma.comment.delete({ where: { id: commentId } });
+    await comment.destroy();
 
     res.json({ message: "Comment and any replies deleted successfully" });
   } catch (error) {
-    res
-      .status(500)
-      .json({ message: "Failed to delete comment", error: error.message });
+    res.status(500).json({ message: "Failed to delete comment", error: error.message });
   }
 };
 
@@ -166,5 +165,5 @@ module.exports = {
   addComment,
   getCommentsByPost,
   deleteComment,
-  getAllComments
+  getAllComments,
 };
